@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import time
 from app.core.schema import SharedContext, AgentAction, jobs_db
 from app.core.llm import count_tokens, call_llm_with_backoff
@@ -14,9 +15,11 @@ MODEL_COMPRESSION = "nvidia/nemotron-3.5-bolt-e4b"
 async def compress_context(context: SharedContext):
     prompt = f"Summarize history. Keep JSON/Citations [chunk_X].\n\nHistory: {context.history}"
     response, _ = await call_llm_with_backoff(MODEL_COMPRESSION, [{"role": "user", "content": prompt}])
-    summary = response.choices[0].message.content
+    msg = response.choices[0].message
+    summary = msg.content or getattr(msg, "reasoning_content", "") or "History compressed."
     context.history = [AgentAction(agent_id="compression_agent", thought_process="Budget exceeded.", output=summary, token_count=response.usage.total_tokens)]
-    context.remaining_budget = 4000 - response.usage.total_tokens
+    budget_cap = int(os.getenv("CONTEXT_BUDGET", "25000"))
+    context.remaining_budget = max(500, budget_cap - response.usage.total_tokens)
 
 async def execute_job(query: str, job_id: str):
     """The Main Execution Loop with SSE Streaming."""

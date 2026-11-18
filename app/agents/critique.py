@@ -56,8 +56,12 @@ async def run_critique(context: SharedContext, content_to_review: str):
     msg = response.choices[0].message
     content = msg.content or getattr(msg, "reasoning_content", "") or ""
     
-    # Parse the evaluations robustly
+    # Parse and normalize evaluations to a list so worker refinement always detects disagreements
     evaluations = extract_json(content)
+    if isinstance(evaluations, dict):
+        evaluations = [evaluations]
+    elif not isinstance(evaluations, list):
+        evaluations = []
     
     # Log the action for the provenance map
     action = AgentAction(

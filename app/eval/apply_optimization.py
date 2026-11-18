@@ -11,14 +11,14 @@ def apply_optimization(agent_name: str, new_prompt: str):
         print(f"❌ Agent {agent_name} not found.")
         return
 
-    with open(file_path, "r") as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Regex to find and replace the SYSTEM_PROMPT string content
+    # Regex to find and replace the SYSTEM_PROMPT string content safely (lambda avoids backreference issues)
     pattern = r'(SYSTEM_PROMPT = """)(.*?)(""")'
-    new_content = re.sub(pattern, f'SYSTEM_PROMPT = """\n{new_prompt}\n"""', content, flags=re.DOTALL)
+    new_content = re.sub(pattern, lambda m: f'SYSTEM_PROMPT = """\n{new_prompt}\n"""', content, count=1, flags=re.DOTALL)
 
-    with open(file_path, "w") as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(new_content)
     
     print(f"[SUCCESS] Optimized {agent_name}.py with the new prompt.")

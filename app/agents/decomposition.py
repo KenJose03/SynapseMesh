@@ -12,6 +12,7 @@ CRITICAL ARCHITECTURE:
 1. Identify dependencies: If Task B requires information from Task A, Task B must list Task A's ID in its 'dependencies' array.
 2. Output Format: You must return ONLY a JSON object with a root key "tasks" containing the list of DAG nodes.
 3. Graph Completion: Every graph must terminate in a "synthesis" task that consolidates findings into the final answer.
+4. Ambiguity & Missing Inputs: If the user query is ambiguous or missing essential inputs (e.g., "Calculate the ROI", "What's the weather like?", "Tell me about the merger" without specifying which numbers, location, or companies), do NOT create web retrieval tasks; create ONLY a single "synthesis" task instructing the Synthesis Agent to ask the user for the missing information.
 
 JSON SCHEMA:
 {
@@ -42,8 +43,10 @@ async def run_decomposition(context: SharedContext):
     
     response, latency = await call_llm_with_backoff(MODEL_DECOMPOSITION, messages)
     
-    # Extract tasks list robustly
-    parsed = extract_json(response.choices[0].message.content)
+    # Extract tasks list robustly (handling reasoning_content fallback)
+    msg = response.choices[0].message
+    content = msg.content or getattr(msg, "reasoning_content", "") or ""
+    parsed = extract_json(content)
     
     if isinstance(parsed, dict) and "tasks" in parsed:
         tasks = parsed["tasks"]

@@ -38,7 +38,10 @@ async def run_orchestrator(context: SharedContext):
     # FIX: Unpack the tuple (response, latency)
     response, latency = await call_llm_with_backoff(MODEL_ORCHESTRATOR, messages)
     
-    # Now you can access .choices correctly
-    decision = extract_json(response.choices[0].message.content)
+    # Unpack response with reasoning_content fallback and track token budget
+    msg = response.choices[0].message
+    content = msg.content or getattr(msg, "reasoning_content", "") or ""
+    decision = extract_json(content)
+    context.add_tokens(response.usage.total_tokens)
     
     return decision

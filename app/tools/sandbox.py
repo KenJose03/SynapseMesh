@@ -2,18 +2,18 @@ import docker
 
 def python_sandbox_tool(code: str):
     """Section 2: Production-grade isolated code execution."""
-    client = docker.from_env()
     try:
-        # Spin up a tiny alpine container, run code, and kill it immediately
-        container = client.containers.run(
+        client = docker.from_env()
+        # Spin up a tiny isolated alpine container, run code with no network, and remove immediately
+        output = client.containers.run(
             "python:3.10-alpine",
-            command=f"python3 -c '{code}'",
+            command=["python3", "-c", code],
             remove=True,
             stdout=True,
             stderr=True,
-            mem_limit="128m", # Constraint
-            timeout=5
+            mem_limit="128m",
+            network_disabled=True,
         )
-        return {"status": "success", "stdout": container.decode()}
+        return {"status": "success", "stdout": output.decode("utf-8", errors="replace")}
     except Exception as e:
         return {"status": "error", "stderr": str(e)}

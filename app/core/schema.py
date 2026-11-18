@@ -31,7 +31,7 @@ class SharedContext(BaseModel):
     
     # Section 3: Context Budgeting
     total_tokens_used: int = 0
-    remaining_budget: int = int(os.getenv("CONTEXT_BUDGET", "8000"))
+    remaining_budget: int = int(os.getenv("CONTEXT_BUDGET", "25000"))
     
     # Memory and Provenance
     history: List[AgentAction] = []

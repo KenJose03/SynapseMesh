@@ -18,9 +18,9 @@ async def web_search_tool(query: str) -> Dict[str, Any]:
     try:
         def _sync_search():
             with DDGS() as ddgs:
-                return list(ddgs.text(query, max_results=3))
+                return list(ddgs.text(query, max_results=5))
 
-        async with asyncio.timeout(5.0): 
+        async with asyncio.timeout(10.0): 
             raw_results = await asyncio.to_thread(_sync_search)
                 
             # 2. Failure Mode: Empty Results
@@ -50,7 +50,7 @@ async def web_search_tool(query: str) -> Dict[str, Any]:
         # 3. Failure Mode: Timeout
         return {
             "status": "timeout",
-            "error": "Search exceeded 5 second limit.",
+            "error": "Search exceeded 10 second limit.",
             "results": []
         }
     except Exception as e:
