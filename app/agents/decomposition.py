@@ -3,7 +3,7 @@ from app.core.llm import call_llm_with_backoff
 from app.core.schema import SharedContext, AgentAction
 from app.core.utils import extract_json
 
-MODEL_DECOMPOSITION = "meta/llama-4-maverick-17b-128e-instruct"
+MODEL_DECOMPOSITION = "nvidia/nemotron-3.5-lightning-30b-a3b"
 
 SYSTEM_PROMPT = """
 You are a Decomposition Agent. Your goal is to deconstruct complex queries into a Directed Acyclic Graph (DAG) of sub-tasks.
@@ -11,6 +11,7 @@ You are a Decomposition Agent. Your goal is to deconstruct complex queries into 
 CRITICAL ARCHITECTURE:
 1. Identify dependencies: If Task B requires information from Task A, Task B must list Task A's ID in its 'dependencies' array.
 2. Output Format: You must return ONLY a JSON object with a root key "tasks" containing the list of DAG nodes.
+3. Graph Completion: Every graph must terminate in a "synthesis" task that consolidates findings into the final answer.
 
 JSON SCHEMA:
 {
@@ -41,10 +42,47 @@ async def run_decomposition(context: SharedContext):
     
     response, latency = await call_llm_with_backoff(MODEL_DECOMPOSITION, messages)
     
-    # 🛠️ THE FIX: Use extract_json and REMOVE the subsequent json.loads call.
-    # extract_json handles the "tasks" wrapper automatically.
-    tasks = extract_json(response.choices[0].message.content)
+    # Extract tasks list robustly
+    parsed = extract_json(response.choices[0].message.content)
     
+    if isinstance(parsed, dict) and "tasks" in parsed:
+        tasks = parsed["tasks"]
+    elif isinstance(parsed, list):
+        tasks = parsed
+    else:
+        tasks = []
+
+    # Ensure validity and guarantee termination with a synthesis task
+    if not isinstance(tasks, list) or len(tasks) == 0:
+        tasks = [
+            {"id": "retrieval_1", "type": "retrieval", "description": context.original_query, "dependencies": []},
+            {"id": "synthesis_1", "type": "synthesis", "description": "Synthesize the final answer.", "dependencies": ["retrieval_1"]}
+        ]
+    else:
+        # Guarantee task IDs and dependency lists are well-formed
+        has_synthesis = False
+        task_ids = []
+        for i, t in enumerate(tasks):
+            if not isinstance(t, dict):
+                continue
+            if "id" not in t:
+                t["id"] = f"task_{i+1}"
+            if "type" not in t:
+                t["type"] = "retrieval"
+            if "dependencies" not in t or not isinstance(t["dependencies"], list):
+                t["dependencies"] = []
+            if t["type"] == "synthesis":
+                has_synthesis = True
+            task_ids.append(t["id"])
+
+        if not has_synthesis:
+            tasks.append({
+                "id": f"synthesis_{len(tasks)+1}",
+                "type": "synthesis",
+                "description": "Consolidate and synthesize the final answer.",
+                "dependencies": task_ids.copy()
+            })
+            
     context.task_graph = tasks
     
     action = AgentAction(

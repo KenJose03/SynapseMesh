@@ -2,7 +2,7 @@ from app.core.llm import call_llm_with_backoff
 from app.core.schema import SharedContext, AgentAction
 from app.core.utils import extract_json
 
-MODEL_SYNTHESIS = "meta/llama-4-maverick-17b-128e-instruct"
+MODEL_SYNTHESIS = "nvidia/nemotron-3.5-lightning-30b-a3b"
 
 SYSTEM_PROMPT = """
 You are a Synthesis Agent. Your goal is to merge agent outputs into a final answer.
@@ -26,24 +26,45 @@ Your final answer must be a JSON object:
 """
 
 async def run_synthesis(context: SharedContext):
-    # Assemble all relevant context for the final merge
-    full_context_history = "\n".join([f"{a.agent_id}: {a.output}" for a in context.history])
+    # Assemble relevant evidence (excluding internal decomposition metadata)
+    evidence_entries = [
+        f"{a.agent_id}: {a.output}"
+        for a in context.history
+        if a.agent_id != "decomposition"
+    ]
+    full_context_history = "\n".join(evidence_entries) or "No prior agent evidence."
     
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": f"Finalize the answer based on this history:\n{full_context_history}"}
+        {
+            "role": "user",
+            "content": (
+                f"Original User Query: {context.original_query}\n\n"
+                f"Agent Evidence & Critique History:\n{full_context_history}\n\n"
+                f"Directly answer the Original User Query using the verified evidence above."
+            ),
+        },
     ]
     
     response, latency = await call_llm_with_backoff(MODEL_SYNTHESIS, messages)
-    data = extract_json(response.choices[0].message.content)
+    msg = response.choices[0].message
+    content = msg.content or getattr(msg, "reasoning_content", "") or ""
+    data = extract_json(content)
     
-    context.final_answer = data["final_answer"]
+    if isinstance(data, dict):
+        final_answer = data.get("final_answer") or data.get("answer") or data.get("response") or str(data)
+    elif isinstance(data, str) and data.strip():
+        final_answer = data
+    else:
+        final_answer = str(data)
+        
+    context.final_answer = final_answer
     
     # Log the final synthesis action
     action = AgentAction(
         agent_id="synthesis",
         thought_process="Merged outputs and resolved critique flags.",
-        output=data["final_answer"],
+        output=final_answer,
         token_count=response.usage.total_tokens
     )
     context.history.append(action)

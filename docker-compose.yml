@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: mega_ai
+      POSTGRES_DB: synapse_mesh
     ports:
       - "5432:5432"
 

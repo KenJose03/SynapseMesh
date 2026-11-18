@@ -1,9 +1,11 @@
+from datetime import datetime
 import json
 from app.core.llm import call_llm_with_backoff
 from app.core.schema import SharedContext, AgentAction
+from app.core.utils import extract_json
 
-# Using the flagship Mistral model for top-tier reasoning
-MODEL_CRITIQUE = "mistralai/mistral-medium-3.5-128b"
+# Using Nemotron 3.5 Super 120B MoE (~0.5s latency) to audit 30B Lightning outputs
+MODEL_CRITIQUE = "nvidia/nemotron-3.5-super-vl-120b-a12b"
 
 SYSTEM_PROMPT = """
 You are a Critique Agent. Your job is to rigorously evaluate the claims made by other agents.
@@ -11,6 +13,7 @@ For every claim in the provided text, you must:
 1. Assign a numeric confidence score (0.0 to 1.0).
 2. Identify the exact 'span' (text segment) if you disagree or find an error.
 3. Provide a justification for your disagreement.
+4. IMPORTANT: Verify time-sensitive or post-2024 claims against the provided Live Retrieved Evidence and Today's Date. Do NOT reject a claim merely because it occurred after your training cutoff if it is supported by the Live Retrieved Evidence.
 
 CRITICAL: You are a programmatic sub-module. 
 - Output ONLY a raw JSON object. 
@@ -27,21 +30,40 @@ Example:
 """
 
 async def run_critique(context: SharedContext, content_to_review: str):
+    if not content_to_review:
+        return []
+
+    today_date = datetime.now().strftime("%B %d, %Y")
+    tool_snippets = "\n".join(
+        f"[{t.tool_name} | {t.status}]: {t.output_data[:800]}"
+        for t in context.tool_vault
+    ) or "No live search evidence retrieved."
+
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": f"Review this output:\n{content_to_review}"}
+        {
+            "role": "user",
+            "content": (
+                f"Today's Date: {today_date}\n"
+                f"Original Query: {context.original_query}\n\n"
+                f"Live Retrieved Evidence:\n{tool_snippets}\n\n"
+                f"Output to Review:\n{content_to_review}"
+            ),
+        },
     ]
     
     response, latency = await call_llm_with_backoff(MODEL_CRITIQUE, messages)
+    msg = response.choices[0].message
+    content = msg.content or getattr(msg, "reasoning_content", "") or ""
     
-    # Parse the evaluations
-    evaluations = json.loads(response.choices[0].message.content)
+    # Parse the evaluations robustly
+    evaluations = extract_json(content)
     
     # Log the action for the provenance map
     action = AgentAction(
         agent_id="critique",
         thought_process="Performed span-level verification of agent claims.",
-        output=json.dumps(evaluations),
+        output=json.dumps(evaluations) if not isinstance(evaluations, str) else evaluations,
         token_count=response.usage.total_tokens
     )
     context.history.append(action)

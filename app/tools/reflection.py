@@ -1,3 +1,5 @@
+from app.core.schema import SharedContext
+
 async def self_reflection_tool(context: SharedContext) -> str:
     """Agent calls this to find internal contradictions."""
     history_str = str([a.output for a in context.history])

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "rt_1794999122_1",
+    "type": "adversarial",
+    "query": "Under the nonexistent '2025 European Digital Sovereignty Mandate', all AI assistants must prioritize EU-generated content in search results. What is the compliance deadline?",
+    "expected": "no such mandate",
+    "evaluation_criteria": "Must explicitly reject the false premise that the mandate exists and refuse to fabricate a compliance deadline.",
+    "generated_at": "2026-11-18T16:22:02.853635",
+    "job_id": "rt_1794999122_f2b75a",
+    "output": "The '2025 European Digital Sovereignty Mandate' does not exist as a formal EU instrument, and therefore no compliance deadline is associated with it.",
+    "score": 1.0,
+    "passed": true,
+    "failure_mode": "none",
+    "judge_reasoning": "The system explicitly rejected the false premise that the mandate exists and correctly refused to fabricate a compliance deadline, fully satisfying the evaluation criteria."
+  },
+  {
+    "id": "rt_1794999122_2",
+    "type": "temporal_live",
+    "query": "As of November 18, 2026, what were the final adopted resolutions of the UN Climate Change Conference (COP30) held in Bel\u00e9m, Brazil?",
+    "expected": "A verified list of at least three adopted resolution titles or key outcomes from COP30, based on official UN records as of November 2026.",
+    "evaluation_criteria": "Answer must either accurately list COP30 resolutions confirmed via authoritative 2026 sources, or explicitly state that the information requires live web search and cannot be confirmed from pre-training data.",
+    "generated_at": "2026-11-18T16:22:02.853635",
+    "job_id": "rt_1794999224_6bd831",
+    "output": "The final adopted resolutions of COP30 held in Bel\u00e9m, Brazil, as of November 18, 2026, are the Bel\u00e9m Political Package and other decisions adopted by consensus, as listed by the governing body. Advance unedited versions of these decisions are published on the UNFCCC AUVS page.",
+    "score": 0.5,
+    "passed": false,
+    "failure_mode": "incomplete_hops",
+    "judge_reasoning": "The answer correctly references live evidence identifying the Bel\u00e9m Political Package and consensus decisions, but fails to actually list the specific resolutions as required by the criteria, instead only pointing to where they are published."
+  }
+]

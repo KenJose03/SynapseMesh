@@ -4,7 +4,7 @@ from app.core.llm import call_llm_with_backoff
 from app.core.schema import SharedContext
 
 # We use the 70B model for the Brain
-MODEL_ORCHESTRATOR = "meta/llama-3.3-70b-instruct"
+MODEL_ORCHESTRATOR = "nvidia/nemotron-3.5-lightning-30b-a3b"
 
 SYSTEM_PROMPT = """
 You are the Master Orchestrator of a multi-agent AI system. 

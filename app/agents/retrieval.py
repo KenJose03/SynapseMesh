@@ -5,7 +5,7 @@ from app.tools.search import web_search_tool
 import json
 import time
 
-MODEL_RETRIEVAL = "meta/llama-3.3-70b-instruct"
+MODEL_RETRIEVAL = "nvidia/nemotron-3.5-lightning-30b-a3b"
 
 SYSTEM_PROMPT = """
 You are a Retrieval-Augmented Agent. Your goal is to answer queries using multi-hop reasoning.
@@ -70,16 +70,25 @@ async def run_retrieval(context: SharedContext, sub_task_query: str):
     ]
 
     response, latency = await call_llm_with_backoff(MODEL_RETRIEVAL, messages)
-    data = extract_json(response.choices[0].message.content)
+    msg = response.choices[0].message
+    content = msg.content or getattr(msg, "reasoning_content", "") or ""
+    data = extract_json(content)
+
+    if isinstance(data, dict):
+        reasoning = data.get("reasoning", "Retrieved and analyzed search chunks.")
+        answer = data.get("answer") or data.get("response") or str(data)
+    else:
+        reasoning = "Retrieved and analyzed search chunks."
+        answer = str(data)
 
     # Log the agent action
     action = AgentAction(
         agent_id="retrieval",
-        thought_process=data["reasoning"],
-        output=data["answer"],
+        thought_process=reasoning,
+        output=answer,
         token_count=response.usage.total_tokens
     )
     context.history.append(action)
     context.add_tokens(response.usage.total_tokens)
 
-    return data
+    return {"reasoning": reasoning, "answer": answer}

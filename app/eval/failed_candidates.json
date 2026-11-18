@@ -1,0 +1,15 @@
+[
+  {
+    "candidate_id": "cand_fb50f5bf",
+    "status": "pending_review",
+    "type": "temporal_live",
+    "query": "As of November 18, 2026, what were the final adopted resolutions of the UN Climate Change Conference (COP30) held in Bel\u00e9m, Brazil?",
+    "expected": "A verified list of at least three adopted resolution titles or key outcomes from COP30, based on official UN records as of November 2026.",
+    "evaluation_criteria": "Answer must either accurately list COP30 resolutions confirmed via authoritative 2026 sources, or explicitly state that the information requires live web search and cannot be confirmed from pre-training data.",
+    "system_output": "The final adopted resolutions of COP30 held in Bel\u00e9m, Brazil, as of November 18, 2026, are the Bel\u00e9m Political Package and other decisions adopted by consensus, as listed by the governing body. Advance unedited versions of these decisions are published on the UNFCCC AUVS page.",
+    "score": 0.5,
+    "failure_mode": "incomplete_hops",
+    "judge_reasoning": "The answer correctly references live evidence identifying the Bel\u00e9m Political Package and consensus decisions, but fails to actually list the specific resolutions as required by the criteria, instead only pointing to where they are published.",
+    "discovered_at": "2026-11-18T16:25:30.499011"
+  }
+]

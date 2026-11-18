@@ -2,6 +2,8 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
+import os
+
 class ToolLog(BaseModel):
     """Logs for Section 2: Tool Calling & Failure Modes"""
     tool_name: str
@@ -29,7 +31,7 @@ class SharedContext(BaseModel):
     
     # Section 3: Context Budgeting
     total_tokens_used: int = 0
-    remaining_budget: int = 4000
+    remaining_budget: int = int(os.getenv("CONTEXT_BUDGET", "8000"))
     
     # Memory and Provenance
     history: List[AgentAction] = []
@@ -39,3 +41,6 @@ class SharedContext(BaseModel):
     def add_tokens(self, count: int):
         self.total_tokens_used += count
         self.remaining_budget -= count
+
+# In-memory execution trace store
+jobs_db: Dict[str, Any] = {}
